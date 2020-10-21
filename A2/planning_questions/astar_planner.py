@@ -73,7 +73,7 @@ class AStarPlanner(object):
         y = state.y
         
         # Neighbors can only lie within the image. This is how to get the image size.
-        rows, cols = self.world.shape[:2]
+        cols, rows = self.world.shape[:2]
 
         dx = [0]
         dy = [0]
@@ -137,12 +137,12 @@ class AStarPlanner(object):
         Q[start_state] = 0.0
 
         # Array that contains the optimal distance we've found from the starting state so far
-        best_dist_found = float("inf") * np.ones((world.shape[0], world.shape[1]))
+        best_dist_found = float("inf") * np.ones((world.shape[1], world.shape[0]))
         best_dist_found[start_state.x, start_state.y] = 0
 
         # Boolean array that is true iff the distance to come of a state has been
         # finalized
-        visited = np.zeros((world.shape[0], world.shape[1]), dtype='uint8')
+        visited = np.zeros((world.shape[1], world.shape[0]), dtype='uint8')
 
         # Contains key-value pairs of states where key is the parent of the value
         # in the computation of the shortest path
