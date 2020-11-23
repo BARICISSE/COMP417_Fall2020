@@ -64,7 +64,7 @@ class HuskyMapper:
         # the z-axis points upwards
 
         self.baselaser_x_in_map = None
-        self.baselaser_x_in_map = None 
+        self.baselaser_y_in_map = None 
         self.yaw_map_baselaser = None  
 
         self.lidar_count = 0      
