@@ -134,11 +134,20 @@ class AStarPlanner(object):
 
         # Q is a mutable priority queue implemented as a dictionary
         Q = priority_dict()
-        Q[start_state] = 0.0
+        #Q[start_state] = 0.0
+        # For A* Priority is givien by f(V) so insert f(V) in Q
 
         # Array that contains the optimal distance we've found from the starting state so far
         best_dist_found = float("inf") * np.ones((world.shape[1], world.shape[0]))
         best_dist_found[start_state.x, start_state.y] = 0
+        
+        # lower bound definition for f(V)
+        lower_bound = float("inf") * np.ones((world.shape[0], world.shape[1]))
+        lower_bound[start_state.x, start_state.y] = self.heurisitic_calculator(start_state, dest_state)
+
+        # adding the starting node to the priority queue.
+        # Initially Queue has just Start node
+        Q[start_state] = lower_bound[start_state.x,start_state.y]
 
         # Boolean array that is true iff the distance to come of a state has been
         # finalized
@@ -151,6 +160,7 @@ class AStarPlanner(object):
         while Q:
             
             # s is also removed from the priority Q with this
+            # this is also the start node initially since start node has lowest f cost in Q
             s = Q.pop_smallest()
             
             # Assert s hasn't been visited before
@@ -160,6 +170,7 @@ class AStarPlanner(object):
             # so there's no need to come back after this (by greedy property)
             visited[s.x, s.y] = 1
             
+            # If we reach the destination stop and return the path.
             if s == dest_state:
                 return self._follow_parent_pointers(parents, s)
 
@@ -174,12 +185,21 @@ class AStarPlanner(object):
                 # if the state ns has not been visited before or we just found a shorter path
                 # to visit it then update its priority in the queue, and also its
                 # distance to come and its parent
+                # If neightbor node ns is not in queue: 
+                    # update the cost to come to ns
+                    # update the lower bound in the priority queue
+                    # set the parent of neighbor node ns to the current node s
                 if (ns not in Q) or (alternative_best_dist_ns < best_dist_found[ns.x, ns.y]):
-                    Q[ns] = alternative_best_dist_ns
                     best_dist_found[ns.x, ns.y] = alternative_best_dist_ns
+                    lower_bound[ns.x, ns.y] = best_dist_found[ns.x, ns.y] + self.heurisitic_calculator(ns, dest_state)
+                    Q[ns] = lower_bound[ns.x, ns.y]
                     parents[ns] = s
                     
         return [start_state]
+
+    # method that calculates Heuritsitc value between two nodes [one node is current_node working on and another ndoe is dest_state]
+    def heurisitic_calculator(self,current_state, end_state):
+        return sqrt((current_state.x - end_state.x)**2+(current_state.y -end_state.y)**2)
 
 
 if __name__ == "__main__":
@@ -197,7 +217,11 @@ if __name__ == "__main__":
 
     # TODO: Change the goal state to 3 different values, saving and running between each
     # in order to produce your images to submit
-    dest_state = State(300,300)
+    #dest_state = State(300,300)
+    # dest_state = State(399, 390)
+    dest_state = State(350, 200)
+    # dest_state = State(350, 450)
+
     
     print("astar_planner.py is attempting to find a path from ("+str(start_state.x)+','+str(start_state.y)+') to ('+str(dest_state.x)+','+str(dest_state.y)+') in the image named ' + sys.argv[1] + '.')
     print('This may take a few moments...')
