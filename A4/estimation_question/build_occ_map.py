@@ -36,13 +36,23 @@ class OccupancyGridMap:
     def log_odds_ratio_to_belief(self, lor):
         return 1.0/(1 + np.exp(lor))
 
+    def add_points(self,points):
+        self.points = points
+
     def save_map_as_image(self, filename):
         
         img = np.zeros((self.height,self.width,3), np.uint8)
-        for y in range(0, self.height):
-            for x in range(0, self.width):
+        for r in range(0, self.height):
+            for c in range(0, self.width):
                 # threshold the pixel
-                img[y, x] = int(self.log_odds_ratio_to_belief( self.log_odds_ratio_occupancy_grid_map[y][x] ) * 255)
+                img[r, c] = int(self.log_odds_ratio_to_belief( self.log_odds_ratio_occupancy_grid_map[r][c] ) * 255)
+
+        for point in self.points:
+            r, c = self.cartesian_to_grid_coords( point[0], point[1] )
+            if r < self.height and r >= 0 and c < self.width and c >= 0:
+                img[r, c, 0] = 0
+                img[r, c, 1] = 255
+                img[r, c, 2] = 0
 
         cv2.imwrite(filename, img)
         
@@ -143,6 +153,7 @@ class HuskyMapper:
         #    matches. Now you have a r, theta to convert to x, y : polar -> euclidean.
         points_xyz_in_baselaser_frame = [np.array([0, 0, 0])]*len(ranges_in_baselaser_frame) # CHANGE THIS
         points_xyz_in_map_frame = self.from_laser_to_map_coordinates(points_xyz_in_baselaser_frame)
+        self.ogm.add_points(points_xyz_in_map_frame)
         
         # END OF YOUR CHANGES
 
