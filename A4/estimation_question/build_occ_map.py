@@ -4,6 +4,7 @@ from math import pi, log, exp
 import numpy as np
 import yaml
 import cv2
+# import tf.transformations as tr
 
 class OccupancyGridMap:
     def __init__(self, num_rows, num_cols, meters_per_cell, grid_origin_in_map_frame, init_log_odds):
@@ -77,7 +78,14 @@ class HuskyMapper:
         self.baselaser_y_in_map = None 
         self.yaw_map_baselaser = None  
 
-        self.lidar_count = 0      
+        self.lidar_count = 0    
+
+        self.dist_diff = None
+        self.theta_diff = None
+
+        # self.p_map_baselink = np.array( [self.odometry.pose.pose.position.x, self.odometry.pose.pose.position.y, self.odometry.pose.pose.position.z])
+        # self.R_map_baselaser = tr.quaternion_matrix(self.q_map_baselaser)[0:3,0:3]
+        # self.p_map_baselaser = self.p_map_baselink + np.dot(self.p_baselink_baselaser,self.R_map_baselaser)  
     
     def from_laser_to_map_coordinates(self, points_in_baselaser_frame):
         #
@@ -89,8 +97,15 @@ class HuskyMapper:
         
         # This line is a place-holder which is incorrect and should be replaced. It does
         # demonstrate the correct data structure
-        points_in_map_frame = points_in_baselaser_frame
-
+        print("POINTS IN BASE LAYER FRAME")
+        print(points_in_baselaser_frame)
+        points_in_map_frame = [] 
+        for i in range(len(points_in_baselaser_frame)):
+            theta = self.yaw_map_baselaser + points_in_baselaser_frame[i][2]
+            r = sqrt(points_in_baselaser_frame[i][0]**2 + points_in_baselaser_frame[i][1]**2)
+            x = r*cos(theta) + self.baselaser_x_in_map
+            y = r*sin(theta) + self.baselaser_y_in_map
+            points_in_map_frame.append(np.array([x, y, theta]))
         return points_in_map_frame
 
     def is_in_field_of_view(self, robot_row, robot_col, laser_theta, row, col):
@@ -104,9 +119,28 @@ class HuskyMapper:
         #
         # TODO: fill logic in here
         #
+        x = (col-robot_col)*self.ogm.meters_per_cell
+
+        y = (row-robot_row)*self.ogm.meters_per_cell
+
+        self.dist_diff = sqrt( y**2 + x**2)
+
+        dist_t = atan2(y, x)
+
+
+        self.theta_diff = atan2(sin(dist_t-laser_theta), cos(dist_t-laser_theta))
 
         # This line is wrong. Instead of always returning true, you need to
         # compute some geometry and only return true when the cell is seen.
+        #checking if dist_diff is within max and min laser range
+        dist_diff_bool = (self.dist_diff > self.min_laser_range ) and (self.dist_diff < self.max_laser_range)
+        # and theta within max and min laser angle
+        theta_diff_bool = (self.theta_diff < self.max_laser_angle ) and (self.theta_diff > self.min_laser_angle )
+
+        #Both statement has to be true :: hance AND logical operator
+        if ( dist_diff_bool and theta_diff_bool):
+            return True
+        #cel ( row , col) is not in the field of view of the 2D laser of the robot lcoated at cell ( robot_cow , robot_col)
         return True
 
     def inverse_measurement_model(self, row, col, robot_row, robot_col, robot_theta_in_map, beam_ranges, beam_angles):
@@ -118,8 +152,8 @@ class HuskyMapper:
         # TODO: Find the range r and angle diff_angle of the beam (robot_row, robot_col) ------> (row, col)  
         # r should be in meters and diff_angle should be in [-pi, pi]. Useful things to know are same as above.
         #
-        r = 1.0                                # MUST CHANGE THIS
-        diff_angle = 0.0                       # MUST CHANGE THIS
+        r = self.dist_diff                                 # MUST CHANGE THIS
+        diff_angle = self.theta_diff                       # MUST CHANGE THIS
         
         closest_beam_angle, closest_beam_idx = min((val, idx) for (idx, val) in enumerate([ abs(diff_angle - ba) for ba in beam_angles ]))
         r_cb = beam_ranges[closest_beam_idx]
@@ -151,7 +185,13 @@ class HuskyMapper:
         # 1) self.angles_in_baselaser_frame is a list of angles of the same size as the 
         #    scan. They correspond so each entry "i" of the ranges and "i" of the angles 
         #    matches. Now you have a r, theta to convert to x, y : polar -> euclidean.
-        points_xyz_in_baselaser_frame = [np.array([0, 0, 0])]*len(ranges_in_baselaser_frame) # CHANGE THIS
+
+        points_xyz_in_baselaser_frame = []
+        for (r, theta) in zip(ranges_in_baselaser_frame, self.angles_in_baselaser_frame):
+            if r < self.max_laser_range and r > self.min_laser_range:
+                x = r*cos(theta)
+                y = r*sin(theta)
+                points_xyz_in_baselaser_frame.append(np.array([x, y, 0]))
         points_xyz_in_map_frame = self.from_laser_to_map_coordinates(points_xyz_in_baselaser_frame)
         self.ogm.add_points(points_xyz_in_map_frame)
         

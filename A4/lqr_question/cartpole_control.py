@@ -33,11 +33,28 @@ goal = np.array([ 0, 0, 0, np.pi ])     # This is where we want to end up. Perfe
 # TODO: Fill in this function
 def computeControl( x ):
 
-    control = 0 # This means apply no force. Please replace this with your computations and 
+    # control = 0 # This means apply no force. Please replace this with your computations and 
                 # return a single scalar (real number), force that should be applied to the cart
                 # as a function of its current state, x.
+    x[3] =x[3]- math.pi
+    # A =  [[  0.,      1.,    0. ,     0.  ],
+    #       [  0.,     -0.16,    0. ,     5.892],
+    #       [  0.,      0.48,    0.,    -47.136],
+    #       [  0.,      0.,     1.,      0.   ]]
+    # B = [[ 0. ],
+    #      [ 1.6],
+    #      [-4.8],
+    #      [ 0. ]]
+    # Q = [[  1,   0,   0,   0],
+    #      [  0,  35,   0,   0],
+    #      [  0,   0, 500 ,  0],
+    #      [  0,   0,   0, 100]]
+    # R = [[5]]
+    k = [[  0.4472136,    2.96508445,  -9.35417298, -16.36231334]] # gotten from the lqr_helper
+   
+    control = np.array([np.dot(k,x)])
 
-    return control
+    return control  
 
 # After this is all the code to run the cartpole physics, draw it on the screen, etc. 
 # You should not have to change anything below this, but are encouraged to read and understand
